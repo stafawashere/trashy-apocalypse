@@ -1,7 +1,17 @@
+import arcade
+
 class Player:
-    def __init__(self, name):
+    def __init__(self, name, x=0, y=0, sprite_list=None):
         self.name = name
         self.health = 100
+        self.state = "idle"
+
+        self.sprite = arcade.Sprite("assets/sprites/player.png", scale=0.1)
+        self.sprite.center_x = x
+        self.sprite.center_y = y
+
+        if sprite_list is not None:
+            sprite_list.append(self.sprite)
 
     def take_damage(self, amount):
         self.health -= amount

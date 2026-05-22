@@ -1,2 +1,2 @@
-from .screen import Screen
-from .entities import Playerbie
+from objects.screen import Screen
+from objects.entities import Player

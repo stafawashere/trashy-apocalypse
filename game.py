@@ -1,5 +1,5 @@
 import arcade
-from .objects import Screen
+from objects.__init__ import Screen, Player
 
 
 screen = Screen(1000, 600, "DeepClean")
@@ -11,14 +11,18 @@ class Process(arcade.Window):
         self.setup()
 
     def setup(self):
+        self.player_list = arcade.SpriteList()
+        self.player = Player("player", x=screen.center[0], y=screen.center[1], sprite_list=self.player_list)
+        
         arcade.set_background_color(arcade.color.BLACK)
         # initialize player, weapon, zombies, and other game state
 
     def on_draw(self):
-        arcade.start_render()
-        # draw sprites, UI, game info, and shit
+        self.clear()
+        self.player_list.draw()
 
     def on_update(self, delta_time: float):
+        
         # update player movement, zombie shitty AI, bullets, collisions
         pass
 
