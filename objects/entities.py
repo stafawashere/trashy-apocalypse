@@ -24,3 +24,18 @@ class Player:
         if self.health > 100:
             self.health = 100
         return self.health
+
+
+class Zombie:
+    def __init__(self, x=0, y=0, sprite_list=None):
+        self.name = "zombie"
+        self.health = 100
+        self.state = "chasing"
+
+        self.sprite = arcade.Sprite("assets/sprites/player.png", scale=0.1)
+        self.sprite.center_x = x
+        self.sprite.center_y = y
+        self.sprite.color = (255, 60, 60)
+
+        if sprite_list is not None:
+            sprite_list.append(self.sprite)

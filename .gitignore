@@ -1,7 +1,6 @@
-__pycache__/game.cpython-312.pyc
-objects/__pycache__/__init__.cpython-312.pyc
-.gitignore
-objects/__pycache__/screen.cpython-312.pyc
-objects/__pycache__/entities.cpython-312.pyc
+__pycache__/
+*.pyc
+.venv/
+.vscode/
 .hidden-items.json
-.vscode/settings.json
+.DS_Store

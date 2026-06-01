@@ -1,4 +1,4 @@
-# DeepClean Game
+# Trashy Apocalypse Game
 
 Recommended Python versions: **3.11** or **3.12**.
 

@@ -1,5 +1,5 @@
 class Screen:
-    def __init__(self, width, height, title="DeepClean"):
+    def __init__(self, width, height, title="Trashy Apocalypse"):
         self.title = title
         self.width = width
         self.height = height
