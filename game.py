@@ -1,6 +1,6 @@
 import arcade
-from objects.__init__ import Screen, Player, Map
-from handlers import Movement, Rotation, Camera, Boundary, Horde
+from objects.__init__ import Screen, Player, Map, Equipment
+from handlers import Movement, Rotation, Camera, Boundary, Horde, Weld
 
 
 screen = Screen(1000, 600, "Trashy Apocalypse")
@@ -25,6 +25,10 @@ class Process(arcade.Window):
         self.zombie_list = arcade.SpriteList()
         self.horde = Horde(self.player, self.map, player_speed=4, spawn_interval=10, sprite_list=self.zombie_list)
 
+        self.equipment_list = arcade.SpriteList()
+        self.clorax_bottle = Equipment("clorax_bottle", scale=0.3, x=self.map.center[0]+100, y=self.map.center[1], offset_x=-20, offset_y=0, sprite_list=self.equipment_list)
+        self.clorax_weld = Weld(self.player, self.clorax_bottle)
+
         arcade.set_background_color(arcade.color.BLACK)
         # initialize player, weapon, zombies, and other game state
 
@@ -34,6 +38,7 @@ class Process(arcade.Window):
         self.map_list.draw()
         self.zombie_list.draw()
         self.player_list.draw()
+        self.equipment_list.draw()
 
     def on_update(self, delta_time: float):
         self.movement.update()
@@ -42,6 +47,7 @@ class Process(arcade.Window):
         self.camera.update()
         self.rotation.update()
         self.horde.update(delta_time)
+        self.clorax_weld.update()
         # bullets, damage
 
     def on_key_press(self, key, modifiers):
