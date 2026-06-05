@@ -26,7 +26,7 @@ class Process(arcade.Window):
         self.horde = Horde(self.player, self.map, player_speed=4, spawn_interval=10, sprite_list=self.zombie_list)
 
         self.equipment_list = arcade.SpriteList()
-        self.clorax_bottle = Equipment("clorax_bottle", scale=0.3, x=self.map.center[0]+100, y=self.map.center[1], offset_x=-20, offset_y=0, sprite_list=self.equipment_list)
+        self.clorax_bottle = Equipment("clorax_bottle", scale=0.3, x=self.map.center[0]+100, y=self.map.center[1], offset_x=-20, offset_y=0, rotation=0, anchored=True, sprite_list=self.equipment_list)
         self.clorax_weld = Weld(self.player, self.clorax_bottle)
 
         arcade.set_background_color(arcade.color.BLACK)
