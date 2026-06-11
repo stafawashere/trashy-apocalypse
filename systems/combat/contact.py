@@ -3,9 +3,10 @@ from constants import CONTACT_DAMAGE, DAMAGE_COOLDOWN_SECONDS
 
 
 class Contact:
-    def __init__(self, local_player, horde):
+    def __init__(self, local_player, horde, audio=None):
         self.local_player = local_player
         self.horde = horde
+        self.audio = audio
         self.seconds_until_vulnerable = 0.0
 
     def update(self, delta_time):
@@ -16,6 +17,8 @@ class Contact:
         if self.is_touching_zombie():
             self.local_player.take_damage(CONTACT_DAMAGE)
             self.seconds_until_vulnerable = DAMAGE_COOLDOWN_SECONDS
+            if self.audio:
+                self.audio.play_damage()
 
     def is_touching_zombie(self):
         for zombie in self.horde.zombies:

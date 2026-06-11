@@ -46,17 +46,24 @@ class Obstacles:
             sprite.center_y += push_y
 
     def separation(self, sprite, obstacle):
-        overlap_x, overlap_y = self.overlap(sprite, obstacle)
+        sprite_box = self.hitbox_bounds(sprite)
+        obstacle_box = self.hitbox_bounds(obstacle)
+        overlap_x, overlap_y = self.overlap(sprite_box, obstacle_box)
         if overlap_x <= 0 or overlap_y <= 0:
             return 0.0, 0.0
 
+        sprite_center_x = (sprite_box[0] + sprite_box[1]) / 2
+        sprite_center_y = (sprite_box[2] + sprite_box[3]) / 2
+        obstacle_center_x = (obstacle_box[0] + obstacle_box[1]) / 2
+        obstacle_center_y = (obstacle_box[2] + obstacle_box[3]) / 2
+
         is_shallower_on_x = overlap_x < overlap_y
         if is_shallower_on_x:
-            is_sprite_left_of_obstacle = sprite.center_x < obstacle.center_x
+            is_sprite_left_of_obstacle = sprite_center_x < obstacle_center_x
             push = overlap_x + SEPARATION_EPSILON
             return (-push if is_sprite_left_of_obstacle else push), 0.0
 
-        is_sprite_below_obstacle = sprite.center_y < obstacle.center_y
+        is_sprite_below_obstacle = sprite_center_y < obstacle_center_y
         push = overlap_y + SEPARATION_EPSILON
         return 0.0, (-push if is_sprite_below_obstacle else push)
 
@@ -68,9 +75,13 @@ class Obstacles:
         sprite.center_y -= offset_y
         return is_blocked
 
-    def overlap(self, sprite, obstacle):
-        distance_x = abs(sprite.center_x - obstacle.center_x)
-        distance_y = abs(sprite.center_y - obstacle.center_y)
-        overlap_x = (sprite.width + obstacle.width) / 2 - distance_x
-        overlap_y = (sprite.height + obstacle.height) / 2 - distance_y
+    def hitbox_bounds(self, sprite):
+        points = sprite.hit_box.get_adjusted_points()
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        return min(xs), max(xs), min(ys), max(ys)
+
+    def overlap(self, sprite_box, obstacle_box):
+        overlap_x = min(sprite_box[1], obstacle_box[1]) - max(sprite_box[0], obstacle_box[0])
+        overlap_y = min(sprite_box[3], obstacle_box[3]) - max(sprite_box[2], obstacle_box[2])
         return overlap_x, overlap_y

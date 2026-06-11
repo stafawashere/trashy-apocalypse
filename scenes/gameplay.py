@@ -14,13 +14,14 @@ from systems import (
     Map,
     Obstacles,
 )
-from ui import Hud
-from constants import WINDEX_TEXTURE, PLAYER_SPEED
+from ui import Hud, Crosshair
+from constants import WINDEX_TEXTURE, WINDEX_NAME, PLAYER_SPEED
 
 
 class GameplayScene:
-    def __init__(self, screen):
+    def __init__(self, screen, audio=None):
         self.screen = screen
+        self.audio = audio
         self._build_world()
         self._build_player()
         self._build_items()
@@ -49,8 +50,8 @@ class GameplayScene:
     def _build_items(self):
         self.item_list = arcade.SpriteList()
         self.held_list = arcade.SpriteList()
-        self.spawner = ItemSpawner(self.camera, self.item_list, texture=WINDEX_TEXTURE, name="windex")
-        self.pickup = Pickup(self.local_player, self.spawner, self.held_list)
+        self.spawner = ItemSpawner(self.camera, self.item_list, texture=WINDEX_TEXTURE, name=WINDEX_NAME, obstacles=self.obstacles)
+        self.pickup = Pickup(self.local_player, self.spawner, self.held_list, audio=self.audio)
         self.aim = Aim(self.local_player, self.camera)
 
     def _build_enemies(self):
@@ -61,11 +62,12 @@ class GameplayScene:
     def _build_combat(self):
         self.bullet_list = arcade.SpriteList()
         self.puff_list = arcade.SpriteList()
-        self.blaster = Blaster(self.local_player, self.bullet_list, self.puff_list, enemies=self.zombie_spawner)
-        self.contact = Contact(self.local_player, self.horde)
+        self.blaster = Blaster(self.local_player, self.bullet_list, self.puff_list, enemies=self.zombie_spawner, audio=self.audio, obstacles=self.obstacles)
+        self.contact = Contact(self.local_player, self.horde, audio=self.audio)
 
     def _build_hud(self):
         self.hud = Hud(self.blaster, self.local_player, self.screen)
+        self.crosshair = Crosshair(self.local_player, self.blaster, self.screen)
 
     def draw(self):
         self.camera.use()
@@ -85,6 +87,7 @@ class GameplayScene:
 
         self.hud.use()
         self.hud.draw()
+        self.crosshair.draw()
 
     def update(self, delta_time):
         self.movement.update()
@@ -107,6 +110,7 @@ class GameplayScene:
         self.contact.update(delta_time)
         self.local_player.update_animation(delta_time)
         self.blaster.update(delta_time)
+        self.crosshair.update(delta_time)
 
     def on_key_press(self, key):
         self.movement.on_key_press(key)
@@ -116,9 +120,11 @@ class GameplayScene:
 
     def on_mouse_motion(self, x, y):
         self.aim.on_mouse_motion(x, y)
+        self.crosshair.on_mouse_motion(x, y)
 
     def on_mouse_press(self, x, y):
         self.aim.on_mouse_motion(x, y)
+        self.crosshair.on_mouse_motion(x, y)
         self.aim.update()
         self.blaster.on_mouse_press()
 

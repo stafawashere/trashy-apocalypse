@@ -55,7 +55,6 @@ CREDIT_NAME_COLOR  = _hex("#e7ddc8")
 
 WINDOW_BG = _hex("#07080c")
 
-# hand-built 5x7 pixel font — source glyphs for the logotype and the PRESS START plaque
 TITLE_FONT = {
     "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
     "R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
@@ -75,9 +74,54 @@ TITLE_FONT = {
     "M": ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
     "Q": ["01110", "10001", "10001", "10001", "10101", "10010", "01101"],
     "I": ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
+    "V": ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
+    "K": ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
+    "W": ["10001", "10001", "10001", "10101", "10101", "10101", "01010"],
+    "B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
 }
 
-# hand-authored spray bottle, 13x21 cells — stands in for the "A" of TRASHY
+GO_SKY_TOP     = _hex("#241f16")
+GO_SKY_MID     = _hex("#15110c")
+GO_SKY_BOTTOM  = _hex("#070605")
+GO_MOON_CORE   = _hex("#aaa091")
+GO_MOON_CRATER = _hex("#82796b")
+GO_MOON_GLOW   = (150, 140, 120)
+GO_BUILDING    = _hex("#0c0b08")
+GO_BUILDING_BROKEN = _hex("#070605")
+GO_WINDOW_DARK = _hex("#100d09")
+GO_WINDOW_LIT  = _hex("#8a5a2a")
+GO_GROUND      = _hex("#070605")
+GO_GROUND_SPECK = _hex("#0d0b07")
+GO_MOUND       = _hex("#0a0805")
+GO_LITTER_COLORS = [_hex(c) for c in ("#7a3a12", "#5a663a", "#5a626c", "#6a2a1c", "#7d6a2a")]
+GO_ASH_COLOR   = _hex("#6a6450")
+GO_FLY_COLOR   = _hex("#05040a")
+
+GO_WASH_COLOR  = (90, 8, 12)
+GO_WASH_ALPHA  = 0.34
+
+GO_PLAQUE_FILL   = _hex("#1a0606")
+GO_PLAQUE_BORDER = _hex("#e23b4e")
+GO_PLAQUE_INNER  = _hex("#06060a")
+GO_PLAQUE_RIVET_SH = _hex("#7a1410")
+GO_PLAQUE_TEXT   = _hex("#e23b4e")
+
+GO_TITLE_COLOR    = _hex("#e23b4e")
+GO_TITLE_SHADOW   = _hex("#5c0c14")
+GO_TITLE_SHADOW2  = _hex("#06060a")
+
+GO_SCORE_LABEL   = _hex("#c14752")
+GO_SCORE_VALUE   = _hex("#ff5a5f")
+GO_SCORE_BORDER  = (226, 59, 78, 102)
+GO_SCORE_DIVIDER = (226, 59, 78, 46)
+
+GO_BG            = _hex("#0a0907")
+
+RESTART_TOP = 466
+GAMEOVER_TEXT_TOP = 212
+SCOREBOARD_TOP = 300
+SCOREBOARD_WIDTH = 360
+
 TITLE_BOTTLE = [
     "..ooooo......",
     ".ohhccooooo..",
@@ -102,7 +146,6 @@ TITLE_BOTTLE = [
     ".ooooooooooo.",
 ]
 
-# design-space layout (authored against the 1000 x 600 reference)
 TITLE_REF_WIDTH  = 1000
 TITLE_REF_HEIGHT = 600
 

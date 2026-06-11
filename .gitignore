@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 .vscode/
 .hidden-items.json
+highscore.json
 .DS_Store
 .docs/
 .claude.md

@@ -2,8 +2,9 @@ from scenes.apocalypse import ApocalypseScene, MenuButton
 
 
 class PauseScene(ApocalypseScene):
-    def __init__(self, screen, on_resume, on_quit):
+    def __init__(self, screen, on_resume, on_quit, audio=None):
         super().__init__(screen, show_logo=True)
+        self.audio = audio
         self.resume_button = MenuButton(self, "RESUME", 336, on_resume)
         self.quit_button = MenuButton(self, "QUIT", 408, on_quit)
         self.buttons = [self.resume_button, self.quit_button]
@@ -30,7 +31,7 @@ class PauseScene(ApocalypseScene):
     def on_mouse_motion(self, x, y):
         self.mouse_x, self.mouse_y = x, y
         for button in self.buttons:
-            button.hovered = button.hit(x, y)
+            button.set_hovered(button.hit(x, y))
 
     def on_mouse_press(self, x, y):
         for button in self.buttons:

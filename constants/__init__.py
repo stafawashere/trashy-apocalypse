@@ -6,3 +6,4 @@ from constants.combat import *
 from constants.hud import *
 from constants.title import *
 from constants.world import *
+from constants.audio import *

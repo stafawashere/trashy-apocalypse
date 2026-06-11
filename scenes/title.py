@@ -22,9 +22,10 @@ from scenes.apocalypse import ApocalypseScene, baked_assets, baked_text
 
 
 class TitleScene(ApocalypseScene):
-    def __init__(self, screen, on_start):
+    def __init__(self, screen, on_start, audio=None):
         super().__init__(screen, show_logo=True)
         self.on_start = on_start
+        self.audio = audio
         self.started = False
 
         self.badge_texture = baked_assets()["badge"]
@@ -133,7 +134,7 @@ class TitleScene(ApocalypseScene):
         text_left = BADGE_LEFT + BADGE_DISPLAY + 14
         badge_center = badge_top + BADGE_DISPLAY / 2
 
-        label_h, gap, name_h = 15, 6, 16
+        label_h, gap, name_h = 15, 11, 16
         name_w = self.credit_name_w * (name_h / self.credit_name_h)
         block_h = label_h + gap + name_h
         block_top = badge_center - block_h / 2
@@ -165,7 +166,10 @@ class TitleScene(ApocalypseScene):
 
     def on_mouse_motion(self, x, y):
         self.mouse_x, self.mouse_y = x, y
+        was_hovering = self.is_hovering_start
         self.is_hovering_start = self._is_over_start(x, y)
+        if self.is_hovering_start and not was_hovering and self.audio:
+            self.audio.play_hover()
 
     def on_mouse_press(self, x, y):
         if self._is_over_start(x, y):

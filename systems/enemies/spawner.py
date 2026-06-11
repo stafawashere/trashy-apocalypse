@@ -28,7 +28,9 @@ class ZombieSpawner:
             return
 
         zombie = Zombie(sprite_list=self.zombie_list)
-        self.place_clear_of_walls(zombie)
+        if not self.place_clear_of_walls(zombie):
+            zombie.sprite.remove_from_sprite_lists()
+            return
         self.zombies.append(zombie)
 
     def place_clear_of_walls(self, zombie):
@@ -39,8 +41,10 @@ class ZombieSpawner:
             zombie.sprite.center_x, zombie.sprite.center_y = self.random_point_on_map(
                 half_width, half_height
             )
-            if self.obstacles is None or not self.obstacles.would_collide(zombie.sprite, 0, 0):
-                return
+            is_spot_clear = self.obstacles is None or not self.obstacles.would_collide(zombie.sprite, 0, 0)
+            if is_spot_clear:
+                return True
+        return False
 
     def random_point_on_map(self, sprite_half_width, sprite_half_height):
         left = sprite_half_width

@@ -2,7 +2,8 @@ import math
 from constants import ZOMBIE_SPEED
 
 LOOKAHEAD_DISTANCE = 18
-STEER_ANGLES = [0, math.radians(45), math.radians(-45), math.radians(90), math.radians(-90)]
+COMMIT_RELEASE_DISTANCE = 40
+DETOUR_OFFSETS = [math.radians(45), math.radians(90), math.radians(135)]
 
 
 class ZombieChase:
@@ -16,9 +17,10 @@ class ZombieChase:
         target_x = self.local_player.sprite.center_x
         target_y = self.local_player.sprite.center_y
         for zombie in self.spawner.zombies:
-            self.step_toward(zombie.sprite, target_x, target_y)
+            self.step_toward(zombie, target_x, target_y)
 
-    def step_toward(self, zombie_sprite, target_x, target_y):
+    def step_toward(self, zombie, target_x, target_y):
+        zombie_sprite = zombie.sprite
         toward_x = target_x - zombie_sprite.center_x
         toward_y = target_y - zombie_sprite.center_y
         distance = math.hypot(toward_x, toward_y)
@@ -28,20 +30,41 @@ class ZombieChase:
             return
 
         desired_heading = math.atan2(toward_y, toward_x)
-        heading = self.unblocked_heading(zombie_sprite, desired_heading)
+        heading = self.steer(zombie, desired_heading)
 
         zombie_sprite.change_x = math.cos(heading) * self.speed
         zombie_sprite.change_y = math.sin(heading) * self.speed
 
-    def unblocked_heading(self, zombie_sprite, desired_heading):
+    def steer(self, zombie, desired_heading):
         if self.obstacles is None:
             return desired_heading
 
-        for angle_offset in STEER_ANGLES:
-            heading = desired_heading + angle_offset
-            offset_x = math.cos(heading) * LOOKAHEAD_DISTANCE
-            offset_y = math.sin(heading) * LOOKAHEAD_DISTANCE
-            if not self.obstacles.would_collide(zombie_sprite, offset_x, offset_y):
-                return heading
+        zombie_sprite = zombie.sprite
+        committed_sign = getattr(zombie, "detour_sign", 0)
+
+        is_committed = committed_sign != 0
+        release_distance = COMMIT_RELEASE_DISTANCE if is_committed else LOOKAHEAD_DISTANCE
+        if self.is_clear(zombie_sprite, desired_heading, release_distance):
+            zombie.detour_sign = 0
+            return desired_heading
+
+        for sign in self.preferred_signs(committed_sign):
+            for offset in DETOUR_OFFSETS:
+                heading = desired_heading + sign * offset
+                if self.is_clear(zombie_sprite, heading, LOOKAHEAD_DISTANCE):
+                    zombie.detour_sign = sign
+                    return heading
 
         return desired_heading
+
+    def preferred_signs(self, committed_sign):
+        if committed_sign > 0:
+            return [1, -1]
+        if committed_sign < 0:
+            return [-1, 1]
+        return [1, -1]
+
+    def is_clear(self, zombie_sprite, heading, distance):
+        offset_x = math.cos(heading) * distance
+        offset_y = math.sin(heading) * distance
+        return not self.obstacles.would_collide(zombie_sprite, offset_x, offset_y)

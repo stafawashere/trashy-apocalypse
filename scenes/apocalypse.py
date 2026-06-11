@@ -2,7 +2,7 @@ import math
 import random
 
 import arcade
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 from constants import (
     TITLE_FONT,
@@ -54,6 +54,25 @@ from constants import (
     LOGO_BOX_TOP,
     LOGO_BOX_WIDTH,
     LOGO_BOX_HEIGHT,
+    GO_SKY_TOP,
+    GO_SKY_MID,
+    GO_SKY_BOTTOM,
+    GO_MOON_CORE,
+    GO_MOON_CRATER,
+    GO_MOON_GLOW,
+    GO_BUILDING,
+    GO_BUILDING_BROKEN,
+    GO_WINDOW_DARK,
+    GO_WINDOW_LIT,
+    GO_GROUND,
+    GO_GROUND_SPECK,
+    GO_MOUND,
+    GO_LITTER_COLORS,
+    GO_ASH_COLOR,
+    GO_FLY_COLOR,
+    GO_WASH_COLOR,
+    GO_WASH_ALPHA,
+    GO_BG,
 )
 
 
@@ -80,7 +99,7 @@ def _put(px, width, height, x, y, color):
         px[x, y] = (color[0], color[1], color[2], 255)
 
 
-# ---------- logotype baking (ports buildWord / renderWord / drawBottle) ----------
+#logotype baking (ports buildWord / renderWord / drawBottle)
 
 def _build_word(text, scale, yoffs, gap, seed, stencil=False, erode=False, melt=False, skip=None):
     skip = skip or []
@@ -212,49 +231,10 @@ def _render_word(px, img_w, img_h, word, ox, oy, ramp, seed, speck=False, rim_fr
 
 
 def _bake_logo():
-    img = Image.new("RGBA", (LOGO_GRID_WIDTH, LOGO_GRID_HEIGHT), (0, 0, 0, 0))
-    px = img.load()
-    w, h = LOGO_GRID_WIDTH, LOGO_GRID_HEIGHT
-
-    yo1 = [0, 1, 2, 1, 2, 3]
-    word1 = _build_word("TRASHY", 3, yo1, gap=2, seed=9, erode=True, melt=True, skip=[2])
-    _render_word(
-        px, w, h, word1, 15, 1,
-        {"out": LOGO_OUTLINE, "base": ROT_ORANGE, "hi": ROT_ORANGE_HI, "sh": ROT_ORANGE_SH, "rim": OOZE_GREEN_HI},
-        seed=21, speck=True, rim_from=68,
-    )
-
-    bottle_x, bottle_y = 50, 1 + yo1[2]
-    for y, row in enumerate(TITLE_BOTTLE):
-        for x, cell in enumerate(row):
-            color = BOTTLE_LEGEND.get(cell)
-            if color:
-                _put(px, w, h, bottle_x + x, bottle_y + y, color)
-
-    rnd = _lcg(41)
-    for _ in range(7):
-        x = 68 + rnd() * 40
-        y = rnd() * 5
-        color = CLEANER_CYAN_HI if rnd() < 0.5 else CLEANER_CYAN
-        _put(px, w, h, int(x), int(y), color)
-    for _ in range(6):
-        x = 15 + rnd() * 14
-        y = 22 + rnd() * 5
-        color = BLOOD if rnd() < 0.5 else BLOOD_DARK
-        _put(px, w, h, int(x), int(y), color)
-
-    yo2 = [1, 0, 1, 0, 0, 1, 0, 1, 0, 1]
-    word2 = _build_word("APOCALYPSE", 2, yo2, gap=1, seed=5, stencil=True)
-    _render_word(
-        px, w, h, word2, 10, 31,
-        {"out": LOGO_OUTLINE, "base": OOZE_GREEN, "hi": OOZE_GREEN_HI, "sh": OOZE_GREEN_SH, "rim": OOZE_GREEN_HI},
-        seed=33, speck=True, overspray=True,
-    )
-
-    return arcade.Texture(img)
+    return arcade.Texture(_bake_logo_image())
 
 
-# ---------- apocalyptic backdrop baking ----------
+#apocalyptic backdrop baking
 def _bake_backdrop(buildings, mounds):
     w, h = BG_GRID_WIDTH, BG_GRID_HEIGHT
     img = Image.new("RGBA", (w, h), (0, 0, 0, 255))
@@ -350,7 +330,7 @@ def _build_backdrop_data():
     return buildings, windows, mounds
 
 
-# ---------- producer badge baking ----------
+#producer badge baking
 
 def _bake_badge():
     n = 24
@@ -385,7 +365,7 @@ def _bake_badge():
     return arcade.Texture(img)
 
 
-# ---------- CRT overlay (scanlines + vignette) ----------
+#CRT overlay (scanlines + vignette)
 
 def _bake_crt():
     w, h = TITLE_REF_WIDTH, TITLE_REF_HEIGHT
@@ -416,7 +396,233 @@ def _bake_crt():
     return arcade.Texture(overlay)
 
 
-# ---------- bitmap text baking (rendered from the 5x7 font) ----------
+#game-over: deadened backdrop
+
+def _build_dead_backdrop_data():
+    rnd = _lcg(7)
+    buildings = []
+    windows = []
+    x = -8
+    while x < 332:
+        bw = 14 + int(rnd() * 18)
+        bh = 24 + int(rnd() * 40)
+        by = 150 - bh
+        wins = []
+        wy = by + 4
+        while wy < 146:
+            wx = x + 3
+            while wx < x + bw - 3:
+                if rnd() < 0.30:
+                    capable = rnd() < 0.25
+                    wins.append((wx, wy, capable))
+                    windows.append((wx, wy, capable))
+                wx += 5
+            wy += 6
+        broken = rnd() < 0.5
+        buildings.append({"bx": x, "by": by, "w": bw, "h": bh, "wins": wins, "broken": broken})
+        x += bw + 2 + int(rnd() * 4)
+
+    mounds = []
+    for mx, mw, mh in ((48, 78, 22), (160, 104, 34), (272, 88, 26)):
+        specks = []
+        for i in range(9):
+            sx = mx + (rnd() - 0.5) * mw * 0.8
+            sy = 150 + rnd() * (mh - 4)
+            color = GO_LITTER_COLORS[(i + int(mx)) % len(GO_LITTER_COLORS)]
+            specks.append((sx, sy, color))
+        mounds.append({"x": mx, "w": mw, "h": mh, "specks": specks})
+
+    return buildings, windows, mounds
+
+
+def _bake_dead_backdrop(buildings, mounds):
+    w, h = BG_GRID_WIDTH, BG_GRID_HEIGHT
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 255))
+    px = img.load()
+
+    for y in range(h):
+        t = y / h
+        if t < 0.42:
+            color = _lerp_color(GO_SKY_TOP, GO_SKY_MID, t / 0.42)
+        else:
+            color = _lerp_color(GO_SKY_MID, GO_SKY_BOTTOM, (t - 0.42) / 0.58)
+        for x in range(w):
+            px[x, y] = (color[0], color[1], color[2], 255)
+
+    moon_x, moon_y, moon_r = 284, 24, 16
+    for y in range(0, 90):
+        for x in range(200, 320):
+            d = math.hypot(x - moon_x, y - moon_y)
+            if d >= 50:
+                continue
+            alpha = 0.22 * max(0.0, (50 - d) / 48)
+            base = px[x, y]
+            px[x, y] = (
+                int(base[0] + (GO_MOON_GLOW[0] - base[0]) * alpha),
+                int(base[1] + (GO_MOON_GLOW[1] - base[1]) * alpha),
+                int(base[2] + (GO_MOON_GLOW[2] - base[2]) * alpha),
+                255,
+            )
+
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([moon_x - moon_r, moon_y - moon_r, moon_x + moon_r, moon_y + moon_r], fill=GO_MOON_CORE)
+    for cx, cy, cr in ((moon_x - 7, moon_y - 5, 4), (moon_x + 6, moon_y + 6, 5), (moon_x + 9, moon_y - 7, 3)):
+        draw.ellipse([cx - cr, cy - cr, cx + cr, cy + cr], fill=GO_MOON_CRATER)
+
+    for b in buildings:
+        draw.rectangle([b["bx"], b["by"], b["bx"] + b["w"] - 1, b["by"] + b["h"] - 1], fill=GO_BUILDING)
+        if b["broken"]:
+            chunk = math.ceil(b["w"] * 0.45)
+            draw.rectangle([b["bx"], b["by"], b["bx"] + chunk - 1, b["by"] + 2], fill=GO_BUILDING_BROKEN)
+        for wx, wy, _capable in b["wins"]:
+            draw.rectangle([wx, wy, wx + 1, wy + 1], fill=GO_WINDOW_DARK)
+
+    draw.rectangle([0, 150, w - 1, h - 1], fill=GO_GROUND)
+    for i in range(0, w, 4):
+        gy = 150 + ((i * 7) % 3)
+        draw.rectangle([i, gy, i + 1, gy], fill=GO_GROUND_SPECK)
+
+    for m in mounds:
+        left = m["x"] - m["w"] / 2
+        right = m["x"] + m["w"] / 2
+        draw.ellipse([left, 153 - m["h"], right, 153 + m["h"]], fill=GO_MOUND)
+        draw.rectangle([left, 153, right, h - 1], fill=GO_MOUND)
+        for sx, sy, color in m["specks"]:
+            draw.rectangle([int(sx), int(sy), int(sx) + 1, int(sy) + 1], fill=color)
+
+    _apply_death_wash(px, w, h)
+    _apply_red_glow(px, w, h)
+
+    return arcade.Texture(img)
+
+
+def _apply_death_wash(px, w, h):
+    a = GO_WASH_ALPHA
+    wr, wg, wb = GO_WASH_COLOR
+    mr = 1 - a + a * wr / 255
+    mg = 1 - a + a * wg / 255
+    mb = 1 - a + a * wb / 255
+    for y in range(h):
+        for x in range(w):
+            r, g, b, _ = px[x, y]
+            px[x, y] = (int(r * mr), int(g * mg), int(b * mb), 255)
+
+
+def _apply_red_glow(px, w, h):
+    gr, gg, gb = 120, 16, 20
+    cx, cy = w * 0.5, h * 0.44
+    rx, ry = w * 0.80, h * 0.70
+    reach = 0.55
+    for y in range(h):
+        for x in range(w):
+            e = math.hypot((x - cx) / rx, (y - cy) / ry)
+            if e >= reach:
+                continue
+            a = 0.18 * (1 - e / reach)
+            r, g, b, _ = px[x, y]
+            sr = 255 - (255 - r) * (255 - gr) // 255
+            sg = 255 - (255 - g) * (255 - gg) // 255
+            sb = 255 - (255 - b) * (255 - gb) // 255
+            px[x, y] = (int(r + (sr - r) * a), int(g + (sg - g) * a), int(b + (sb - b) * a), 255)
+
+
+def _bake_dead_crt():
+    w, h = TITLE_REF_WIDTH, TITLE_REF_HEIGHT
+    small_w, small_h = 200, 120
+    vignette = Image.new("L", (small_w, small_h), 0)
+    vpx = vignette.load()
+    cx, cy = small_w * 0.5, small_h * 0.46
+    rx, ry = small_w * 0.66, small_h * 0.58
+    for y in range(small_h):
+        for x in range(small_w):
+            e = math.hypot((x - cx) / rx, (y - cy) / ry)
+            clear_stop = 0.40
+            if e <= clear_stop:
+                vpx[x, y] = 0
+            else:
+                vpx[x, y] = int(min(1.0, (e - clear_stop) / (1.0 - clear_stop)) * 216)
+    vignette = vignette.resize((w, h), Image.BILINEAR)
+
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    overlay.putalpha(vignette)
+
+    draw = ImageDraw.Draw(overlay)
+    scan_alpha = 66
+    for y in range(0, h, 4):
+        for line in (y + 2, y + 3):
+            if line < h:
+                draw.line([(0, line), (w - 1, line)], fill=(0, 0, 0, scan_alpha))
+
+    return arcade.Texture(overlay)
+
+
+def _bake_ghost_logo():
+    logo_img = _bake_logo_image()
+    w, h = logo_img.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px_in = logo_img.load()
+    px_out = out.load()
+
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px_in[x, y]
+            if a == 0:
+                continue
+            gray = int(0.299 * r + 0.587 * g + 0.114 * b)
+            gray = int(gray * 0.95)
+            sr = min(255, int(gray * 1.15 + 45))
+            sg = int(gray * 0.32)
+            sb = int(gray * 0.26)
+            final_a = int(a * 0.11)
+            px_out[x, y] = (sr, sg, sb, final_a)
+
+    return arcade.Texture(out)
+
+
+def _bake_logo_image():
+    img = Image.new("RGBA", (LOGO_GRID_WIDTH, LOGO_GRID_HEIGHT), (0, 0, 0, 0))
+    px = img.load()
+    w, h = LOGO_GRID_WIDTH, LOGO_GRID_HEIGHT
+
+    yo1 = [0, 1, 2, 1, 2, 3]
+    word1 = _build_word("TRASHY", 3, yo1, gap=2, seed=9, erode=True, melt=True, skip=[2])
+    _render_word(
+        px, w, h, word1, 15, 1,
+        {"out": LOGO_OUTLINE, "base": ROT_ORANGE, "hi": ROT_ORANGE_HI, "sh": ROT_ORANGE_SH, "rim": OOZE_GREEN_HI},
+        seed=21, speck=True, rim_from=68,
+    )
+
+    bottle_x, bottle_y = 50, 1 + yo1[2]
+    for y, row in enumerate(TITLE_BOTTLE):
+        for x, cell in enumerate(row):
+            color = BOTTLE_LEGEND.get(cell)
+            if color:
+                _put(px, w, h, bottle_x + x, bottle_y + y, color)
+
+    rnd = _lcg(41)
+    for _ in range(7):
+        x = 68 + rnd() * 40
+        y = rnd() * 5
+        color = CLEANER_CYAN_HI if rnd() < 0.5 else CLEANER_CYAN
+        _put(px, w, h, int(x), int(y), color)
+    for _ in range(6):
+        x = 15 + rnd() * 14
+        y = 22 + rnd() * 5
+        color = BLOOD if rnd() < 0.5 else BLOOD_DARK
+        _put(px, w, h, int(x), int(y), color)
+
+    yo2 = [1, 0, 1, 0, 0, 1, 0, 1, 0, 1]
+    word2 = _build_word("APOCALYPSE", 2, yo2, gap=1, seed=5, stencil=True)
+    _render_word(
+        px, w, h, word2, 10, 31,
+        {"out": LOGO_OUTLINE, "base": OOZE_GREEN, "hi": OOZE_GREEN_HI, "sh": OOZE_GREEN_SH, "rim": OOZE_GREEN_HI},
+        seed=33, speck=True, overspray=True,
+    )
+
+    return img
+
+
+#bitmap text baking (rendered from the 5x7 font)
 
 def _bake_text(text, scale, color, shadow, gap=2):
     glyph_w, glyph_h = 5, 7
@@ -444,7 +650,7 @@ def _bake_text(text, scale, color, shadow, gap=2):
     return arcade.Texture(img), width, height
 
 
-# ---------- baked-asset caches (deterministic, so shared across scenes) ----------
+#baked-asset caches (deterministic, so shared across scenes)
 
 _assets = None
 _text_cache = {}
@@ -454,6 +660,7 @@ def baked_assets():
     global _assets
     if _assets is None:
         buildings, windows, mounds = _build_backdrop_data()
+        dead_buildings, dead_windows, dead_mounds = _build_dead_backdrop_data()
         _assets = {
             "buildings": buildings,
             "windows": windows,
@@ -462,6 +669,11 @@ def baked_assets():
             "logo": _bake_logo(),
             "badge": _bake_badge(),
             "crt": _bake_crt(),
+            "dead_backdrop": _bake_dead_backdrop(dead_buildings, dead_mounds),
+            "dead_windows": dead_windows,
+            "dead_mounds": dead_mounds,
+            "dead_crt": _bake_dead_crt(),
+            "ghost_logo": _bake_ghost_logo(),
         }
     return _assets
 
@@ -473,7 +685,44 @@ def baked_text(text, scale, color, shadow, gap=2):
     return _text_cache[key]
 
 
-# ---------- shared scene: the animated apocalyptic stage (backdrop + logo + CRT) ----------
+_glow_cache = {}
+
+
+def _bake_glow(text, scale, color, gap, blur, pad):
+    glyph_w, glyph_h = 5, 7
+    letter_w, letter_h = glyph_w * scale, glyph_h * scale
+    inner_w = len(text) * (letter_w + gap) - gap
+    inner_h = letter_h
+    width = inner_w + pad * 2
+    height = inner_h + pad * 2
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    px = img.load()
+
+    for i, ch in enumerate(text):
+        glyph = TITLE_FONT.get(ch)
+        if not glyph:
+            continue
+        x0 = pad + i * (letter_w + gap)
+        for gy in range(glyph_h):
+            for gx in range(glyph_w):
+                if glyph[gy][gx] != "1":
+                    continue
+                for sy in range(scale):
+                    for sx in range(scale):
+                        _put(px, width, height, x0 + gx * scale + sx, pad + gy * scale + sy, color)
+
+    img = img.filter(ImageFilter.GaussianBlur(blur))
+    return arcade.Texture(img), width, height
+
+
+def baked_glow(text, scale, color, gap=2, blur=6, pad=14):
+    key = (text, scale, color, gap, blur, pad)
+    if key not in _glow_cache:
+        _glow_cache[key] = _bake_glow(text, scale, color, gap, blur, pad)
+    return _glow_cache[key]
+
+
+#shared scene: the animated apocalyptic stage (backdrop + logo + CRT)
 
 class ApocalypseScene:
     def __init__(self, screen, show_logo=True):
@@ -497,7 +746,7 @@ class ApocalypseScene:
 
         arcade.set_background_color(WINDOW_BG)
 
-    # ---- composition transform (centered, uniformly scaled 1000x600 stage) ----
+    # composition transform (centered, uniformly scaled 1000x600 stage) 
 
     @property
     def comp_scale(self):
@@ -525,7 +774,7 @@ class ApocalypseScene:
         cell = LOGO_BOX_WIDTH / LOGO_GRID_WIDTH
         return self.design_rect(LOGO_BOX_LEFT + fx * cell, LOGO_BOX_TOP + fy * cell, w * cell, h * cell)
 
-    # ---- animated state ----
+    # animated state 
 
     def _init_ash(self):
         self.ash = []
@@ -612,7 +861,7 @@ class ApocalypseScene:
 
         return dt
 
-    # ---- draw ----
+    # draw 
 
     def draw_backdrop(self):
         arcade.draw_texture_rect(self.backdrop_texture, self.design_rect(0, 0, TITLE_REF_WIDTH, TITLE_REF_HEIGHT), pixelated=True)
@@ -673,20 +922,24 @@ class ApocalypseScene:
         self.camera.match_window(position=True)
 
 
-# ---------- riveted plaque button with hover-scale (used by menus) ----------
+#riveted plaque button with hover-scale (used by menus)
+
+MENU_BUTTON_WIDTH = 300
+
 
 class MenuButton:
-    def __init__(self, scene, label, design_top, on_click):
+    def __init__(self, scene, label, design_top, on_click, width=MENU_BUTTON_WIDTH):
         self.scene = scene
         self.on_click = on_click
         self.texture, self.text_w, self.text_h = baked_text(label, 2, PLAQUE_TEXT, PLAQUE_INNER)
         self.design_top = design_top
+        self.width = width
         self.hovered = False
         self.hover_scale = 1.0
 
     def box(self):
         pad_x, pad_y = 24, 13
-        box_w = self.text_w + pad_x * 2
+        box_w = max(self.text_w + pad_x * 2, self.width)
         box_h = max(self.text_h, 21) + pad_y * 2
         box_left = (TITLE_REF_WIDTH - box_w) / 2
         return box_left, self.design_top, box_w, box_h
@@ -695,6 +948,13 @@ class MenuButton:
         box_left, box_top, box_w, box_h = self.box()
         rect = self.scene.design_rect(box_left, box_top, box_w, box_h)
         return rect.left <= x <= rect.right and rect.bottom <= y <= rect.top
+
+    def set_hovered(self, is_hovered):
+        is_rising_edge = is_hovered and not self.hovered
+        self.hovered = is_hovered
+        audio = getattr(self.scene, "audio", None)
+        if is_rising_edge and audio:
+            audio.play_hover()
 
     def update(self, dt):
         target = 1.07 if self.hovered else 1.0
