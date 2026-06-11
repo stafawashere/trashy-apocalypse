@@ -1,10 +1,10 @@
 class Boundary:
-    def __init__(self, player, map):
-        self.player = player
+    def __init__(self, local_player, map):
+        self.local_player = local_player
         self.map = map
 
     def update(self):
-        player_sprite = self.player.sprite
+        player_sprite = self.local_player.sprite
         half_player_width = player_sprite.width / 2
         half_player_height = player_sprite.height / 2
 

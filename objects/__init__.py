@@ -1,4 +1,4 @@
-from objects.screen import Screen
-from objects.entities import Player, Zombie
-from objects.map import Map
-from objects.equipment import Equipment
+from .screen import Screen
+from .entities import LocalPlayer
+from .map import Map
+from .item import Item

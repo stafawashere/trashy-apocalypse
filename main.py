@@ -1,5 +1,6 @@
-from game import Process
 import arcade
+
+from game import Process
 
 
 def main():

@@ -4,3 +4,11 @@ __pycache__/
 .vscode/
 .hidden-items.json
 .DS_Store
+.docs/
+.claude.md
+.CLAUDE
+docs/sprite-sizing.md
+docs/ui-sizing.md
+.gitignore
+CLAUDE.md
+README.md

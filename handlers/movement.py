@@ -2,8 +2,8 @@ import arcade
 
 
 class Movement:
-    def __init__(self, player, player_speed=4):
-        self.player = player
+    def __init__(self, local_player, player_speed=4):
+        self.local_player = local_player
         self.player_speed = player_speed
         self.keys_held = {
             "left": False,
@@ -49,8 +49,8 @@ class Movement:
         if self.keys_held["down"]:
             move_y -= self.player_speed
 
-        self.player.sprite.change_x = move_x
-        self.player.sprite.change_y = move_y
+        self.local_player.sprite.change_x = move_x
+        self.local_player.sprite.change_y = move_y
         return move_x, move_y
 
     def update(self):
