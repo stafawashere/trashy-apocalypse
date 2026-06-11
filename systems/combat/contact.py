@@ -12,7 +12,7 @@ class Contact:
         if self.seconds_until_vulnerable > 0:
             self.seconds_until_vulnerable -= delta_time
             return
-            
+
         if self.is_touching_zombie():
             self.local_player.take_damage(CONTACT_DAMAGE)
             self.seconds_until_vulnerable = DAMAGE_COOLDOWN_SECONDS

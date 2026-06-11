@@ -12,6 +12,6 @@ class Aim:
     def update(self):
         if not self.local_player.is_holding:
             return
-            
+
         target = self.camera.unproject((self.mouse_x, self.mouse_y))
         self.local_player.aim_at((target.x, target.y))

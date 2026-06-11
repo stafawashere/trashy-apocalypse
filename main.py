@@ -1,10 +1,10 @@
 import arcade
 
-from game import Process
+from game import Game
 
 
 def main():
-    window = Process()
+    window = Game()
     window.setup()
     arcade.run()
 

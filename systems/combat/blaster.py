@@ -1,7 +1,7 @@
 import math
 import random
 import arcade
-from objects.projectile import SprayBullet, SprayPuff
+from entities.projectile import SprayBullet, SprayPuff
 from constants import (
     TANK_MAX,
     SHOT_COST,
