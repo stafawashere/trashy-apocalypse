@@ -1,6 +1,6 @@
 import arcade
 from core import Screen
-from scenes import GameplayScene
+from scenes import GameplayScene, TitleScene, PauseScene
 
 
 screen = Screen(1000, 600, "Trashy Apocalypse")
@@ -9,9 +9,24 @@ screen = Screen(1000, 600, "Trashy Apocalypse")
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(screen.width, screen.height, screen.title, resizable=True)
+        self.gameplay = None
 
     def setup(self):
-        self.scene = GameplayScene(screen)
+        self.scene = TitleScene(screen, on_start=self.start_gameplay)
+
+    def start_gameplay(self):
+        self.gameplay = GameplayScene(screen)
+        self.scene = self.gameplay
+
+    def pause_gameplay(self):
+        self.scene = PauseScene(screen, on_resume=self.resume_gameplay, on_quit=self.quit_game)
+
+    def resume_gameplay(self):
+        arcade.set_background_color(arcade.color.BLACK)
+        self.scene = self.gameplay
+
+    def quit_game(self):
+        self.close()
 
     def on_draw(self):
         self.clear()
@@ -21,6 +36,13 @@ class Game(arcade.Window):
         self.scene.update(delta_time)
 
     def on_key_press(self, key, modifiers):
+        if key == arcade.key.ESCAPE:
+            if isinstance(self.scene, GameplayScene):
+                self.pause_gameplay()
+                return
+            if isinstance(self.scene, PauseScene):
+                self.resume_gameplay()
+                return
         self.scene.on_key_press(key)
 
     def on_key_release(self, key, modifiers):

@@ -43,15 +43,9 @@ def bottom_padding(texture):
     return (texture.height - bottom_y) / texture.height
 
 
-def padding_ratios(texture):
-    left, top, right, bottom = texture.image.getbbox()
-    width, height = texture.width, texture.height
-    return {
-        "left": left / width,
-        "right": (width - right) / width,
-        "top": top / height,
-        "bottom": (height - bottom) / height,
-    }
+def left_padding(texture):
+    bounds = texture.image.getbbox()
+    return bounds[0] / texture.width
 
 
 class Hud:
@@ -71,7 +65,7 @@ class Hud:
 
         self.health_frames = [arcade.load_texture(f"{HEALTH_ICON_DIR}/ui_health_{i}.png") for i in range(HUD_FRAME_COUNT)]
         self.health_icon = arcade.Sprite(self.health_frames[0])
-        self.health_padding = padding_ratios(self.health_icon.texture)
+        self.health_left_padding = left_padding(self.health_icon.texture)
         self.health_label = arcade.Text("HEALTH", 0, 0, HEALTH_LABEL_COLOR, LABEL_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="left", anchor_y="top")
         self.health_value = arcade.Text("100/100", 0, 0, VALUE_COLOR, LABEL_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="right", anchor_y="top")
 
@@ -114,25 +108,32 @@ class Hud:
 
     def layout_health(self):
         scale = self.ui_scale
+        font_size = LABEL_FONT_SIZE * scale
         icon_height = HEALTH_ICON_HEIGHT * scale
         icon_width = icon_height * self.health_icon.texture.width / self.health_icon.texture.height
 
         left_edge, top_edge = self.anchor(0, 1, EDGE_MARGIN, -EDGE_MARGIN)
 
-        self.health_icon.scale = icon_height / self.health_icon.texture.height
-        self.health_icon.center_x = left_edge + icon_width / 2 - self.health_padding["left"] * icon_width
-        self.health_icon.center_y = top_edge - icon_height / 2 + self.health_padding["top"] * icon_height
+        self.health_label.font_size = font_size
+        self.health_value.font_size = font_size
 
-        visible_right = self.health_icon.center_x + icon_width / 2 - self.health_padding["right"] * icon_width
-        self.health_bar_left = visible_right + HEALTH_ICON_GAP * scale
         label_top = top_edge
-        self.health_bar_top = label_top - LABEL_FONT_SIZE * scale - LABEL_GAP * scale
+        text_height = self.health_label.content_height
+        text_row_width = self.health_label.content_width + self.health_value.content_width
+        bar_width = max(HEALTH_BAR_WIDTH * scale, text_row_width)
+
+        self.health_bar_left = left_edge + icon_width + HEALTH_ICON_GAP * scale
+        self.health_bar_right = self.health_bar_left + bar_width
+        self.health_bar_top = label_top - text_height - LABEL_GAP * scale
         self.health_bar_bottom = self.health_bar_top - HEALTH_BAR_HEIGHT * scale
 
-        bar_right = self.health_bar_left + HEALTH_BAR_WIDTH * scale
         self.health_label.x, self.health_label.y = self.health_bar_left, label_top
-        self.health_value.x, self.health_value.y = bar_right, label_top
-        self.health_label.font_size = self.health_value.font_size = LABEL_FONT_SIZE * scale
+        self.health_value.x, self.health_value.y = self.health_bar_right, label_top
+
+        group_center_y = (label_top + self.health_bar_bottom) / 2
+        self.health_icon.scale = icon_height / self.health_icon.texture.height
+        self.health_icon.center_x = left_edge + icon_width / 2 - self.health_left_padding * icon_width
+        self.health_icon.center_y = group_center_y
 
     def on_resize(self):
         self.camera.match_window(position=True)
@@ -164,7 +165,7 @@ class Hud:
 
     def draw_health(self):
         scale = self.ui_scale
-        bar_width = HEALTH_BAR_WIDTH * scale
+        bar_width = self.health_bar_right - self.health_bar_left
         bar_height = HEALTH_BAR_HEIGHT * scale
         health = self.local_player.health
         fill_width = bar_width * health / 100

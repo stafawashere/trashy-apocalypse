@@ -12,6 +12,7 @@ from systems import (
     Blaster,
     Contact,
     Map,
+    Obstacles,
 )
 from ui import Hud
 from constants import WINDEX_TEXTURE, PLAYER_SPEED
@@ -39,9 +40,11 @@ class GameplayScene:
             y=self.map.center[1],
             sprite_list=self.player_list,
         )
+        
         self.movement = Movement(self.local_player, player_speed=PLAYER_SPEED)
         self.camera = Camera(self.local_player, self.map, self.screen, zoom=2)
         self.boundary = Boundary(self.local_player, self.map)
+        self.obstacles = Obstacles(self.local_player)
 
     def _build_items(self):
         self.item_list = arcade.SpriteList()
@@ -52,8 +55,8 @@ class GameplayScene:
 
     def _build_enemies(self):
         self.zombie_list = arcade.SpriteList()
-        self.zombie_spawner = ZombieSpawner(self.map, self.zombie_list)
-        self.horde = Horde(self.local_player, self.zombie_spawner)
+        self.zombie_spawner = ZombieSpawner(self.map, self.zombie_list, self.obstacles)
+        self.horde = Horde(self.local_player, self.zombie_spawner, self.obstacles)
 
     def _build_combat(self):
         self.bullet_list = arcade.SpriteList()
@@ -76,7 +79,7 @@ class GameplayScene:
         else:
             self.player_list.draw()
             self.held_list.draw()
-            
+
         self.bullet_list.draw()
         self.puff_list.draw()
 
@@ -86,6 +89,7 @@ class GameplayScene:
     def update(self, delta_time):
         self.movement.update()
         self.player_list.update()
+        self.obstacles.update()
         self.boundary.update()
         self.camera.update()
         self.spawner.update()
@@ -95,6 +99,7 @@ class GameplayScene:
         self.horde.chase()
         self.zombie_list.update()
         self.horde.collide()
+        self.horde.respect_walls()
 
         for zombie in self.zombie_spawner.zombies:
             zombie.update_animation(delta_time)
