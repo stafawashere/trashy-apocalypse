@@ -1,44 +1,51 @@
 import arcade
+from constants import (
+    LOCAL_PLAYER_ASSET_DIR,
+    ZOMBIE_ASSET_DIR,
+    PLAYER_SPRITE_SCALE,
+    ZOMBIE_SPRITE_SCALE,
+    FRAME_SIZE,
+    ANIMATION_FRAME_COUNT,
+    SECONDS_PER_FRAME,
+    ZOMBIE_SECONDS_PER_FRAME,
+    MAX_HEALTH,
+    ZOMBIE_HITS_TO_DIE,
+    DAMAGE_FLASH_SECONDS,
+    DAMAGE_FLASH_COLOR,
+    NORMAL_COLOR,
+    FACING_DOWN,
+    FACING_UP,
+    FACING_LEFT,
+    FACING_RIGHT,
+    HAND_ANCHOR_FRACTION,
+    WALK_BOB_OFFSETS,
+)
 
-LOCAL_PLAYER_ASSET_DIR = "assets/local_player"
-PLAYER_SPRITE_SCALE = 0.1
-FRAME_SIZE = 432
-FRAME_COUNT = 4
-SECONDS_PER_FRAME = 0.1
-MAX_HEALTH = 100
 
-FACING_DOWN = "down"
-FACING_UP = "up"
-FACING_LEFT = "left"
-FACING_RIGHT = "right"
-
-HAND_ANCHOR_FRACTION = {
-    FACING_DOWN: (0.49, 0.69),
-    FACING_UP: (0.49, 0.35),
-    FACING_LEFT: (0.25, 0.56),
-    FACING_RIGHT: (0.75, 0.56),
-}
-
-WALK_BOB_OFFSETS = (0.0, 2.0, -1.0, 2.0)
-
-
-def load_animation_frames(sheet_name):
-    sheet = arcade.load_spritesheet(f"{LOCAL_PLAYER_ASSET_DIR}/{sheet_name}.png")
+def load_animation_frames(sheet_name, asset_dir):
+    sheet = arcade.load_spritesheet(f"{asset_dir}/{sheet_name}.png")
     return sheet.get_texture_grid(
         size=(FRAME_SIZE, FRAME_SIZE),
-        columns=FRAME_COUNT,
-        count=FRAME_COUNT,
+        columns=ANIMATION_FRAME_COUNT,
+        count=ANIMATION_FRAME_COUNT,
     )
 
 
-def directional_frames(side_sheet_name, up_sheet_name, down_sheet_name):
-    right_frames = load_animation_frames(side_sheet_name)
+def directional_frames(side_sheet_name, up_sheet_name, down_sheet_name, asset_dir):
+    right_frames = load_animation_frames(side_sheet_name, asset_dir)
     return {
-        FACING_DOWN: load_animation_frames(down_sheet_name),
-        FACING_UP: load_animation_frames(up_sheet_name),
+        FACING_DOWN: load_animation_frames(down_sheet_name, asset_dir),
+        FACING_UP: load_animation_frames(up_sheet_name, asset_dir),
         FACING_RIGHT: right_frames,
         FACING_LEFT: [frame.flip_left_right() for frame in right_frames],
     }
+
+
+def facing_for_velocity(velocity_x, velocity_y):
+    priority_is_horizontal = abs(velocity_x) > abs(velocity_y)
+    if priority_is_horizontal:
+        return FACING_RIGHT if velocity_x > 0 else FACING_LEFT
+    return FACING_UP if velocity_y > 0 else FACING_DOWN
 
 
 class LocalPlayer:
@@ -47,14 +54,15 @@ class LocalPlayer:
         self.health = MAX_HEALTH
 
         self.idle_texture = arcade.load_texture(f"{LOCAL_PLAYER_ASSET_DIR}/player.png")
-        self.walk_frames = directional_frames("walk_side", "walk_up", "walk_down")
-        self.hold_frames = directional_frames("hold_side", "hold_up", "hold_down")
+        self.walk_frames = directional_frames("walk_side", "walk_up", "walk_down", LOCAL_PLAYER_ASSET_DIR)
+        self.hold_frames = directional_frames("hold_side", "hold_up", "hold_down", LOCAL_PLAYER_ASSET_DIR)
 
         self.facing = FACING_DOWN
         self.current_frame_index = 0
         self.seconds_on_current_frame = 0.0
         self.held_item = None
         self.aim_target = None
+        self.flash_seconds_remaining = 0.0
 
         self.sprite = arcade.Sprite(self.idle_texture, scale=PLAYER_SPRITE_SCALE)
         self.sprite.center_x = x
@@ -78,6 +86,8 @@ class LocalPlayer:
         self.aim_target = target
 
     def update_animation(self, delta_time):
+        self.update_damage_flash(delta_time)
+
         velocity_x = self.sprite.change_x
         velocity_y = self.sprite.change_y
         is_standing_still = velocity_x == 0 and velocity_y == 0
@@ -86,7 +96,7 @@ class LocalPlayer:
         if self.is_holding:
             self.face_aim_target()
         elif not is_standing_still:
-            self.facing = self.facing_for_velocity(velocity_x, velocity_y)
+            self.facing = facing_for_velocity(velocity_x, velocity_y)
 
         if is_standing_still:
             self.show_idle(frames)
@@ -104,17 +114,11 @@ class LocalPlayer:
         else:
             self.sprite.texture = self.idle_texture
 
-    def facing_for_velocity(self, velocity_x, velocity_y):
-        priority_is_horizontal = abs(velocity_x) > abs(velocity_y)
-        if priority_is_horizontal:
-            return FACING_RIGHT if velocity_x > 0 else FACING_LEFT
-        return FACING_UP if velocity_y > 0 else FACING_DOWN
-
     def advance_frame(self, delta_time):
         self.seconds_on_current_frame += delta_time
         if self.seconds_on_current_frame >= SECONDS_PER_FRAME:
             self.seconds_on_current_frame -= SECONDS_PER_FRAME
-            self.current_frame_index = (self.current_frame_index + 1) % FRAME_COUNT
+            self.current_frame_index = (self.current_frame_index + 1) % ANIMATION_FRAME_COUNT
 
     def face_aim_target(self):
         if self.aim_target is None:
@@ -149,8 +153,74 @@ class LocalPlayer:
 
     def take_damage(self, amount):
         self.health = max(self.health - amount, 0)
+        self.flash_seconds_remaining = DAMAGE_FLASH_SECONDS
         return self.health
+
+    def update_damage_flash(self, delta_time):
+        if self.flash_seconds_remaining > 0:
+            self.flash_seconds_remaining -= delta_time
+        is_flashing = self.flash_seconds_remaining > 0
+        self.sprite.color = DAMAGE_FLASH_COLOR if is_flashing else NORMAL_COLOR
 
     def heal(self, amount):
         self.health = min(self.health + amount, MAX_HEALTH)
         return self.health
+
+
+class Zombie:
+    def __init__(self, name="zombie", x=0, y=0, sprite_list=None):
+        self.name = name
+
+        self.idle_texture = arcade.load_texture(f"{ZOMBIE_ASSET_DIR}/zombie.png")
+        self.walk_frames = directional_frames("walk_side", "walk_up", "walk_down", ZOMBIE_ASSET_DIR)
+
+        self.facing = FACING_DOWN
+        self.current_frame_index = 0
+        self.seconds_on_current_frame = 0.0
+        self.hits_remaining = ZOMBIE_HITS_TO_DIE
+        self.flash_seconds_remaining = 0.0
+
+        self.sprite = arcade.Sprite(self.idle_texture, scale=ZOMBIE_SPRITE_SCALE)
+        self.sprite.center_x = x
+        self.sprite.center_y = y
+
+        if sprite_list is not None:
+            sprite_list.append(self.sprite)
+
+    @property
+    def is_dead(self):
+        return self.hits_remaining <= 0
+
+    def take_damage(self, amount=1):
+        self.hits_remaining -= amount
+        self.flash_seconds_remaining = DAMAGE_FLASH_SECONDS
+        return self.hits_remaining
+
+    def update_animation(self, delta_time):
+        self.update_damage_flash(delta_time)
+
+        velocity_x = self.sprite.change_x
+        velocity_y = self.sprite.change_y
+        is_standing_still = velocity_x == 0 and velocity_y == 0
+
+        if is_standing_still:
+            self.current_frame_index = 0
+            self.seconds_on_current_frame = 0.0
+            self.sprite.texture = self.idle_texture
+            return
+
+        self.facing = facing_for_velocity(velocity_x, velocity_y)
+        self.advance_frame(delta_time)
+        self.sprite.texture = self.walk_frames[self.facing][self.current_frame_index]
+
+    def advance_frame(self, delta_time):
+        self.seconds_on_current_frame += delta_time
+        if self.seconds_on_current_frame >= ZOMBIE_SECONDS_PER_FRAME:
+            self.seconds_on_current_frame -= ZOMBIE_SECONDS_PER_FRAME
+            self.current_frame_index = (self.current_frame_index + 1) % ANIMATION_FRAME_COUNT
+
+    def update_damage_flash(self, delta_time):
+        if self.flash_seconds_remaining > 0:
+            self.flash_seconds_remaining -= delta_time
+        is_flashing = self.flash_seconds_remaining > 0
+        self.sprite.color = DAMAGE_FLASH_COLOR if is_flashing else NORMAL_COLOR

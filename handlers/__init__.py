@@ -4,3 +4,8 @@ from .boundary import Boundary
 from .spawner import Spawner
 from .pickup import Pickup
 from .aim import Aim
+from .zombie_spawner import ZombieSpawner
+from .horde import Horde
+from .blaster import Blaster
+from .hud import Hud
+from .contact import Contact

@@ -1,3 +1,5 @@
+import math
+
 import arcade
 
 
@@ -48,6 +50,12 @@ class Movement:
             move_y += self.player_speed
         if self.keys_held["down"]:
             move_y -= self.player_speed
+
+        is_moving_diagonally = move_x != 0 and move_y != 0
+        if is_moving_diagonally:
+            magnitude = math.hypot(move_x, move_y)
+            move_x = move_x / magnitude * self.player_speed
+            move_y = move_y / magnitude * self.player_speed
 
         self.local_player.sprite.change_x = move_x
         self.local_player.sprite.change_y = move_y

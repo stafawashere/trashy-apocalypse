@@ -1,0 +1,20 @@
+PLAYER_SPEED        = 4
+PLAYER_SPRITE_SCALE = 0.1
+MAX_HEALTH          = 100
+
+FACING_DOWN  = "down"
+FACING_UP    = "up"
+FACING_LEFT  = "left"
+FACING_RIGHT = "right"
+
+HAND_ANCHOR_FRACTION = {
+    FACING_DOWN:  (0.49, 0.69),
+    FACING_UP:    (0.49, 0.35),
+    FACING_LEFT:  (0.25, 0.56),
+    FACING_RIGHT: (0.75, 0.56),
+}
+
+FRAME_SIZE            = 432
+ANIMATION_FRAME_COUNT = 4
+SECONDS_PER_FRAME     = 0.1
+WALK_BOB_OFFSETS      = (0.0, 2.0, -1.0, 2.0)
