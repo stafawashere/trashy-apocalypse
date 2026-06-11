@@ -12,14 +12,16 @@ from systems import (
     Blaster,
     Contact,
     Map,
+    Obstacles,
 )
-from ui import Hud
-from constants import WINDEX_TEXTURE, PLAYER_SPEED
+from ui import Hud, Crosshair
+from constants import WINDEX_TEXTURE, WINDEX_NAME, PLAYER_SPEED
 
 
 class GameplayScene:
-    def __init__(self, screen):
+    def __init__(self, screen, audio=None):
         self.screen = screen
+        self.audio = audio
         self._build_world()
         self._build_player()
         self._build_items()
@@ -39,30 +41,33 @@ class GameplayScene:
             y=self.map.center[1],
             sprite_list=self.player_list,
         )
+        
         self.movement = Movement(self.local_player, player_speed=PLAYER_SPEED)
         self.camera = Camera(self.local_player, self.map, self.screen, zoom=2)
         self.boundary = Boundary(self.local_player, self.map)
+        self.obstacles = Obstacles(self.local_player)
 
     def _build_items(self):
         self.item_list = arcade.SpriteList()
         self.held_list = arcade.SpriteList()
-        self.spawner = ItemSpawner(self.camera, self.item_list, texture=WINDEX_TEXTURE, name="windex")
-        self.pickup = Pickup(self.local_player, self.spawner, self.held_list)
+        self.spawner = ItemSpawner(self.camera, self.item_list, texture=WINDEX_TEXTURE, name=WINDEX_NAME, obstacles=self.obstacles)
+        self.pickup = Pickup(self.local_player, self.spawner, self.held_list, audio=self.audio)
         self.aim = Aim(self.local_player, self.camera)
 
     def _build_enemies(self):
         self.zombie_list = arcade.SpriteList()
-        self.zombie_spawner = ZombieSpawner(self.map, self.zombie_list)
-        self.horde = Horde(self.local_player, self.zombie_spawner)
+        self.zombie_spawner = ZombieSpawner(self.map, self.zombie_list, self.obstacles)
+        self.horde = Horde(self.local_player, self.zombie_spawner, self.obstacles)
 
     def _build_combat(self):
         self.bullet_list = arcade.SpriteList()
         self.puff_list = arcade.SpriteList()
-        self.blaster = Blaster(self.local_player, self.bullet_list, self.puff_list, enemies=self.zombie_spawner)
-        self.contact = Contact(self.local_player, self.horde)
+        self.blaster = Blaster(self.local_player, self.bullet_list, self.puff_list, enemies=self.zombie_spawner, audio=self.audio, obstacles=self.obstacles)
+        self.contact = Contact(self.local_player, self.horde, audio=self.audio)
 
     def _build_hud(self):
         self.hud = Hud(self.blaster, self.local_player, self.screen)
+        self.crosshair = Crosshair(self.local_player, self.blaster, self.screen)
 
     def draw(self):
         self.camera.use()
@@ -76,16 +81,18 @@ class GameplayScene:
         else:
             self.player_list.draw()
             self.held_list.draw()
-            
+
         self.bullet_list.draw()
         self.puff_list.draw()
 
         self.hud.use()
         self.hud.draw()
+        self.crosshair.draw()
 
     def update(self, delta_time):
         self.movement.update()
         self.player_list.update()
+        self.obstacles.update()
         self.boundary.update()
         self.camera.update()
         self.spawner.update()
@@ -95,6 +102,7 @@ class GameplayScene:
         self.horde.chase()
         self.zombie_list.update()
         self.horde.collide()
+        self.horde.respect_walls()
 
         for zombie in self.zombie_spawner.zombies:
             zombie.update_animation(delta_time)
@@ -102,6 +110,7 @@ class GameplayScene:
         self.contact.update(delta_time)
         self.local_player.update_animation(delta_time)
         self.blaster.update(delta_time)
+        self.crosshair.update(delta_time)
 
     def on_key_press(self, key):
         self.movement.on_key_press(key)
@@ -111,9 +120,11 @@ class GameplayScene:
 
     def on_mouse_motion(self, x, y):
         self.aim.on_mouse_motion(x, y)
+        self.crosshair.on_mouse_motion(x, y)
 
     def on_mouse_press(self, x, y):
         self.aim.on_mouse_motion(x, y)
+        self.crosshair.on_mouse_motion(x, y)
         self.aim.update()
         self.blaster.on_mouse_press()
 

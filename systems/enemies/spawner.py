@@ -2,11 +2,14 @@ import random
 from entities import Zombie
 from constants import SPAWN_INTERVAL_SECONDS, MAX_ZOMBIES
 
+MAX_SPAWN_ATTEMPTS = 20
+
 
 class ZombieSpawner:
-    def __init__(self, map, zombie_list, interval_seconds=SPAWN_INTERVAL_SECONDS):
+    def __init__(self, map, zombie_list, obstacles=None, interval_seconds=SPAWN_INTERVAL_SECONDS):
         self.map = map
         self.zombie_list = zombie_list
+        self.obstacles = obstacles
         self.interval_seconds = interval_seconds
         self.seconds_since_last_spawn = 0.0
         self.zombies = []
@@ -25,11 +28,23 @@ class ZombieSpawner:
             return
 
         zombie = Zombie(sprite_list=self.zombie_list)
-        zombie.sprite.center_x, zombie.sprite.center_y = self.random_point_on_map(
-            zombie.sprite.width / 2, zombie.sprite.height / 2
-        )
-
+        if not self.place_clear_of_walls(zombie):
+            zombie.sprite.remove_from_sprite_lists()
+            return
         self.zombies.append(zombie)
+
+    def place_clear_of_walls(self, zombie):
+        half_width = zombie.sprite.width / 2
+        half_height = zombie.sprite.height / 2
+
+        for _ in range(MAX_SPAWN_ATTEMPTS):
+            zombie.sprite.center_x, zombie.sprite.center_y = self.random_point_on_map(
+                half_width, half_height
+            )
+            is_spot_clear = self.obstacles is None or not self.obstacles.would_collide(zombie.sprite, 0, 0)
+            if is_spot_clear:
+                return True
+        return False
 
     def random_point_on_map(self, sprite_half_width, sprite_half_height):
         left = sprite_half_width

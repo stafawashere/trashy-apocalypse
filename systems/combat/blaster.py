@@ -22,14 +22,17 @@ from constants import (
 
 
 class Blaster:
-    def __init__(self, local_player, bullet_list, puff_list, enemies=None):
+    def __init__(self, local_player, bullet_list, puff_list, enemies=None, audio=None, obstacles=None):
         self.local_player = local_player
+        self.audio = audio
         self.bullet_list = bullet_list
         self.puff_list = puff_list
         self.enemies = enemies
+        self.obstacles = obstacles
         self.tank = TANK_MAX
         self.is_firing = False
         self.seconds_since_fire = AUTO_FIRE_INTERVAL
+        self.seconds_since_shot = float("inf")
         self.kills = 0
         self.bullets = []
         self.puffs = []
@@ -50,10 +53,17 @@ class Blaster:
     def on_mouse_release(self):
         self.is_firing = False
 
+    @property
+    def is_spraying(self):
+        spans_auto_fire_gap = AUTO_FIRE_INTERVAL * 2
+        return self.is_firing and self.seconds_since_shot <= spans_auto_fire_gap
+
     def update(self, delta_time):
+        self.seconds_since_shot += delta_time
         self.refill(delta_time)
         self.auto_fire(delta_time)
         self.advance_projectiles(delta_time)
+        self.cleanup_obstacle_hits()
         self.cleanup_hits()
 
     def refill(self, delta_time):
@@ -85,6 +95,7 @@ class Blaster:
         aim_radians = math.atan2(nozzle_to_target_y, nozzle_to_target_x)
 
         self.tank -= SHOT_COST
+        self.seconds_since_shot = 0.0
         self.spawn_main_bullet(nozzle_x, nozzle_y, aim_radians)
         self.maybe_spawn_droplet(nozzle_x, nozzle_y, aim_radians)
         self.puffs.append(SprayPuff(nozzle_x, nozzle_y, aim_radians, self.puff_list))
@@ -124,6 +135,17 @@ class Blaster:
             puff.destroy()
             self.puffs.remove(puff)
 
+    def cleanup_obstacle_hits(self):
+        if self.obstacles is None:
+            return
+
+        for bullet in [bullet for bullet in self.bullets if self.hits_obstacle(bullet)]:
+            bullet.destroy()
+            self.bullets.remove(bullet)
+
+    def hits_obstacle(self, bullet):
+        return len(arcade.check_for_collision_with_list(bullet.sprite, self.obstacles.sprite_list)) > 0
+
     def cleanup_hits(self):
         if self.enemies is None:
             return
@@ -148,6 +170,8 @@ class Blaster:
 
     def damage_zombie(self, zombie):
         zombie.take_damage(BULLET_DAMAGE)
+        if self.audio:
+            self.audio.play_hit()
         if zombie.is_dead:
             self.enemies.zombies.remove(zombie)
             zombie.sprite.remove_from_sprite_lists()

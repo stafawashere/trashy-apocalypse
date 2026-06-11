@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 .vscode/
 .hidden-items.json
+highscore.json
 .DS_Store
 .docs/
 .claude.md
@@ -12,3 +13,5 @@ docs/ui-sizing.md
 .gitignore
 CLAUDE.md
 README.md
+Game Over.dc.html
+docs/art-brief.md

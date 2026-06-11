@@ -1,7 +1,11 @@
 import arcade
+from arcade.hitbox import RotatableHitBox
 from constants import (
     LOCAL_PLAYER_ASSET_DIR,
     PLAYER_SPRITE_SCALE,
+    PLAYER_HITBOX_HALF_WIDTH_FRACTION,
+    PLAYER_HITBOX_TOP_FRACTION,
+    PLAYER_HITBOX_BOTTOM_FRACTION,
     ANIMATION_FRAME_COUNT,
     SECONDS_PER_FRAME,
     MAX_HEALTH,
@@ -37,9 +41,27 @@ class LocalPlayer:
         self.sprite = arcade.Sprite(self.idle_texture, scale=PLAYER_SPRITE_SCALE)
         self.sprite.center_x = x
         self.sprite.center_y = y
+        self.apply_feet_hitbox()
 
         if sprite_list is not None:
             sprite_list.append(self.sprite)
+
+    def apply_feet_hitbox(self):
+        half_width = self.idle_texture.width * PLAYER_HITBOX_HALF_WIDTH_FRACTION
+        top = self.idle_texture.height * PLAYER_HITBOX_TOP_FRACTION
+        bottom = self.idle_texture.height * PLAYER_HITBOX_BOTTOM_FRACTION
+        points = (
+            (-half_width, bottom),
+            (half_width, bottom),
+            (half_width, top),
+            (-half_width, top),
+        )
+        self.sprite.hit_box = RotatableHitBox(
+            points,
+            position=self.sprite.position,
+            scale=self.sprite.scale,
+            angle=self.sprite.angle,
+        )
 
     @property
     def is_holding(self):

@@ -4,6 +4,19 @@ from constants import (
     HUD_FRAME_THRESHOLDS,
     AMMO_ICON_DIR,
     HEALTH_ICON_DIR,
+    KILL_ICON_PATH,
+    KILL_ICON_HEIGHT,
+    ICON_COLUMN_WIDTH,
+    KILL_GROUP_GAP,
+    KILL_COUNT_FONT_SIZE,
+    KILLS_LABEL_FONT_SIZE,
+    KILL_ICON_TEXT_GAP,
+    KILLS_LABEL_GAP,
+    KILL_COUNT_BASELINE_DROP,
+    KILL_SHADOW_OFFSET,
+    KILL_COUNT_COLOR,
+    KILL_COUNT_SHADOW,
+    KILLS_LABEL_COLOR,
     HUD_FONT_PATH,
     HUD_FONT_NAME,
     EDGE_MARGIN,
@@ -16,6 +29,7 @@ from constants import (
     AMMO_BAR_BASELINE_NUDGE,
     HEALTH_ICON_HEIGHT,
     HEALTH_ICON_GAP,
+    HEALTH_LABEL_GAP,
     HEALTH_BAR_WIDTH,
     HEALTH_BAR_HEIGHT,
     TANK_TRACK_COLOR,
@@ -43,15 +57,11 @@ def bottom_padding(texture):
     return (texture.height - bottom_y) / texture.height
 
 
-def padding_ratios(texture):
-    left, top, right, bottom = texture.image.getbbox()
-    width, height = texture.width, texture.height
-    return {
-        "left": left / width,
-        "right": (width - right) / width,
-        "top": top / height,
-        "bottom": (height - bottom) / height,
-    }
+def visible_center_shift(texture):
+    bounds = texture.image.getbbox()
+    center_x_fraction = (bounds[0] + bounds[2]) / 2 / texture.width
+    center_y_fraction = (bounds[1] + bounds[3]) / 2 / texture.height
+    return center_x_fraction - 0.5, 0.5 - center_y_fraction
 
 
 class Hud:
@@ -71,9 +81,15 @@ class Hud:
 
         self.health_frames = [arcade.load_texture(f"{HEALTH_ICON_DIR}/ui_health_{i}.png") for i in range(HUD_FRAME_COUNT)]
         self.health_icon = arcade.Sprite(self.health_frames[0])
-        self.health_padding = padding_ratios(self.health_icon.texture)
+        self.health_icon_shift = visible_center_shift(self.health_icon.texture)
         self.health_label = arcade.Text("HEALTH", 0, 0, HEALTH_LABEL_COLOR, LABEL_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="left", anchor_y="top")
         self.health_value = arcade.Text("100/100", 0, 0, VALUE_COLOR, LABEL_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="right", anchor_y="top")
+
+        self.kill_icon = arcade.Sprite(arcade.load_texture(KILL_ICON_PATH))
+        self.kill_icon_shift = visible_center_shift(self.kill_icon.texture)
+        self.kill_count = arcade.Text("000", 0, 0, KILL_COUNT_COLOR, KILL_COUNT_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="left", anchor_y="baseline")
+        self.kill_count_shadow = arcade.Text("000", 0, 0, KILL_COUNT_SHADOW, KILL_COUNT_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="left", anchor_y="baseline")
+        self.kills_label = arcade.Text("KILLS", 0, 0, KILLS_LABEL_COLOR, KILLS_LABEL_FONT_SIZE, font_name=HUD_FONT_NAME, anchor_x="left", anchor_y="baseline")
 
         self.layout()
 
@@ -90,6 +106,7 @@ class Hud:
     def layout(self):
         self.layout_ammo()
         self.layout_health()
+        self.layout_kills()
 
     def layout_ammo(self):
         scale = self.ui_scale
@@ -114,25 +131,61 @@ class Hud:
 
     def layout_health(self):
         scale = self.ui_scale
+        font_size = LABEL_FONT_SIZE * scale
         icon_height = HEALTH_ICON_HEIGHT * scale
         icon_width = icon_height * self.health_icon.texture.width / self.health_icon.texture.height
 
         left_edge, top_edge = self.anchor(0, 1, EDGE_MARGIN, -EDGE_MARGIN)
 
-        self.health_icon.scale = icon_height / self.health_icon.texture.height
-        self.health_icon.center_x = left_edge + icon_width / 2 - self.health_padding["left"] * icon_width
-        self.health_icon.center_y = top_edge - icon_height / 2 + self.health_padding["top"] * icon_height
+        self.health_label.font_size = font_size
+        self.health_value.font_size = font_size
 
-        visible_right = self.health_icon.center_x + icon_width / 2 - self.health_padding["right"] * icon_width
-        self.health_bar_left = visible_right + HEALTH_ICON_GAP * scale
         label_top = top_edge
-        self.health_bar_top = label_top - LABEL_FONT_SIZE * scale - LABEL_GAP * scale
+        text_height = self.health_label.content_height
+        text_row_width = self.health_label.content_width + self.health_value.content_width
+        bar_width = max(HEALTH_BAR_WIDTH * scale, text_row_width)
+
+        self.health_bar_left = left_edge + (ICON_COLUMN_WIDTH + HEALTH_ICON_GAP) * scale
+        self.health_bar_right = self.health_bar_left + bar_width
+        self.health_bar_top = label_top - text_height - HEALTH_LABEL_GAP * scale
         self.health_bar_bottom = self.health_bar_top - HEALTH_BAR_HEIGHT * scale
 
-        bar_right = self.health_bar_left + HEALTH_BAR_WIDTH * scale
         self.health_label.x, self.health_label.y = self.health_bar_left, label_top
-        self.health_value.x, self.health_value.y = bar_right, label_top
-        self.health_label.font_size = self.health_value.font_size = LABEL_FONT_SIZE * scale
+        self.health_value.x, self.health_value.y = self.health_bar_right, label_top
+
+        group_center_y = (label_top + self.health_bar_bottom) / 2
+        column_center_x = left_edge + ICON_COLUMN_WIDTH * scale / 2
+        shift_x, shift_y = self.health_icon_shift
+        self.health_icon.scale = icon_height / self.health_icon.texture.height
+        self.health_icon.center_x = column_center_x - shift_x * icon_width
+        self.health_icon.center_y = group_center_y - shift_y * icon_height
+
+    def layout_kills(self):
+        scale = self.ui_scale
+        icon_height = KILL_ICON_HEIGHT * scale
+        icon_width = icon_height * self.kill_icon.texture.width / self.kill_icon.texture.height
+
+        row_center_y = self.health_bar_bottom - KILL_GROUP_GAP * scale - icon_height / 2
+        left_edge, _ = self.anchor(0, 0, EDGE_MARGIN)
+
+        column_center_x = left_edge + ICON_COLUMN_WIDTH * scale / 2
+        shift_x, shift_y = self.kill_icon_shift
+        self.kill_icon.scale = icon_height / self.kill_icon.texture.height
+        self.kill_icon.center_x = column_center_x - shift_x * icon_width
+        self.kill_icon.center_y = row_center_y - shift_y * icon_height
+
+        self.kill_count.font_size = self.kill_count_shadow.font_size = KILL_COUNT_FONT_SIZE * scale
+        self.kills_label.font_size = KILLS_LABEL_FONT_SIZE * scale
+
+        baseline_y = row_center_y - KILL_COUNT_BASELINE_DROP * scale
+
+        self.kill_count.x = left_edge + (ICON_COLUMN_WIDTH + KILL_ICON_TEXT_GAP) * scale
+        self.kill_count.y = baseline_y
+        self.kill_count_shadow.x = self.kill_count.x
+        self.kill_count_shadow.y = baseline_y - KILL_SHADOW_OFFSET * scale
+
+        self.kills_label.x = self.kill_count.x + self.kill_count.content_width + KILLS_LABEL_GAP * scale
+        self.kills_label.y = baseline_y
 
     def on_resize(self):
         self.camera.match_window(position=True)
@@ -144,6 +197,7 @@ class Hud:
     def draw(self):
         self.draw_ammo()
         self.draw_health()
+        self.draw_kills()
 
     def draw_ammo(self):
         scale = self.ui_scale
@@ -164,7 +218,7 @@ class Hud:
 
     def draw_health(self):
         scale = self.ui_scale
-        bar_width = HEALTH_BAR_WIDTH * scale
+        bar_width = self.health_bar_right - self.health_bar_left
         bar_height = HEALTH_BAR_HEIGHT * scale
         health = self.local_player.health
         fill_width = bar_width * health / 100
@@ -179,3 +233,14 @@ class Hud:
         self.health_value.text = f"{int(round(health))}/100"
         self.health_label.draw()
         self.health_value.draw()
+
+    def draw_kills(self):
+        count_text = f"{self.blaster.kills:03d}"
+        self.kill_count.text = count_text
+        self.kill_count_shadow.text = count_text
+        self.kills_label.x = self.kill_count.x + self.kill_count.content_width + KILLS_LABEL_GAP * self.ui_scale
+
+        arcade.draw_sprite(self.kill_icon)
+        self.kill_count_shadow.draw()
+        self.kill_count.draw()
+        self.kills_label.draw()
