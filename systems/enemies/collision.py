@@ -1,41 +1,18 @@
 import math
-from constants import ZOMBIE_SPEED, COLLISION_RADIUS_FRACTION
+from constants import COLLISION_RADIUS_FRACTION
 
 
-class Horde:
-    def __init__(self, local_player, spawner, speed=ZOMBIE_SPEED):
+class ZombieCollision:
+    def __init__(self, local_player, spawner):
         self.local_player = local_player
         self.spawner = spawner
-        self.speed = speed
 
-    @property
-    def zombies(self):
-        return self.spawner.zombies
-
-    def chase(self):
-        target_x = self.local_player.sprite.center_x
-        target_y = self.local_player.sprite.center_y
-        for zombie in self.zombies:
-            self.step_toward(zombie.sprite, target_x, target_y)
-
-    def step_toward(self, zombie_sprite, target_x, target_y):
-        toward_x = target_x - zombie_sprite.center_x
-        toward_y = target_y - zombie_sprite.center_y
-        distance = math.hypot(toward_x, toward_y)
-        if distance == 0:
-            zombie_sprite.change_x = 0
-            zombie_sprite.change_y = 0
-            return
-            
-        zombie_sprite.change_x = toward_x / distance * self.speed
-        zombie_sprite.change_y = toward_y / distance * self.speed
-
-    def collide(self):
+    def update(self):
         self.separate_zombies()
         self.push_off_player()
 
     def separate_zombies(self):
-        zombie_sprites = [zombie.sprite for zombie in self.zombies]
+        zombie_sprites = [zombie.sprite for zombie in self.spawner.zombies]
         for index, zombie_sprite in enumerate(zombie_sprites):
             for other_sprite in zombie_sprites[index + 1:]:
                 self.resolve_overlap(zombie_sprite, other_sprite)
@@ -54,7 +31,7 @@ class Horde:
 
     def push_off_player(self):
         player_sprite = self.local_player.sprite
-        for zombie in self.zombies:
+        for zombie in self.spawner.zombies:
             toward_x, toward_y, distance = self.separation(player_sprite, zombie.sprite)
             min_distance = self.collision_radius(player_sprite) + self.collision_radius(zombie.sprite)
             if distance >= min_distance:
@@ -69,7 +46,7 @@ class Horde:
         distance = math.hypot(offset_x, offset_y)
         if distance == 0:
             return 1.0, 0.0, 0.0
-            
+
         return offset_x / distance, offset_y / distance, distance
 
     def collision_radius(self, sprite):

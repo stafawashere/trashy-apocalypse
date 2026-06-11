@@ -1,9 +1,8 @@
 import random
+from entities import Item
 
-from objects import Item
 
-
-class Spawner:
+class ItemSpawner:
     def __init__(self, camera, item_list, texture, name):
         self.camera = camera
         self.item_list = item_list
@@ -15,6 +14,7 @@ class Spawner:
     def update(self):
         if self.has_spawned:
             return
+
         self.spawn()
         self.has_spawned = True
 
@@ -23,6 +23,7 @@ class Spawner:
         item.sprite.center_x, item.sprite.center_y = self.random_point_in_view(
             item.sprite.width / 2, item.sprite.height / 2
         )
+
         self.items.append(item)
 
     def random_point_in_view(self, sprite_half_width, sprite_half_height):

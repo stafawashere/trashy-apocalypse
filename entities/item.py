@@ -42,6 +42,7 @@ class Item:
         offset_y = (0.5 - GRIP_FRACTION_Y) * self.sprite.height
         if is_aiming_left:
             offset_y = -offset_y
+
         return offset_x, offset_y
 
     def nozzle_position(self):
@@ -49,5 +50,6 @@ class Item:
         offset_y = (0.5 - NOZZLE_FRACTION_Y) * self.sprite.height
         if self.is_aiming_left:
             offset_y = -offset_y
+
         rotated_offset_x, rotated_offset_y = rotate_point(offset_x, offset_y, 0.0, 0.0, self.aim_angle)
         return self.sprite.center_x + rotated_offset_x, self.sprite.center_y + rotated_offset_y
